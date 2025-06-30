@@ -1,0 +1,474 @@
+/* assets/css/spiralengine-signup-mobile.css */
+
+/**
+ * Spiral Engine Signup Widget Mobile Styles
+ * 
+ * Mobile-specific optimizations for devices <= 768px
+ */
+
+/* Container Adjustments */
+@media (max-width: 768px) {
+    .spiralengine-signup-container {
+        padding: 1.5rem;
+        border-radius: 8px;
+    }
+    
+    /* Progress Bar Mobile */
+    .spiralengine-progress-bar {
+        margin-bottom: 2rem;
+    }
+    
+    .spiralengine-progress-steps {
+        justify-content: space-between;
+    }
+    
+    .spiralengine-progress-step .step-number {
+        width: 28px;
+        height: 28px;
+        font-size: 0.813rem;
+    }
+    
+    .spiralengine-progress-step .step-label {
+        font-size: 0.688rem;
+    }
+    
+    /* Step Titles Mobile */
+    .spiralengine-step-title {
+        font-size: 1.5rem;
+    }
+    
+    .spiralengine-step-description {
+        font-size: 0.938rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    /* Form Layout Mobile */
+    .spiralengine-form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .spiralengine-form-half {
+        margin-bottom: 1.5rem;
+    }
+    
+    .spiralengine-form-half:last-child {
+        margin-bottom: 0;
+    }
+    
+    /* Input Fields Mobile */
+    .spiralengine-input,
+    .spiralengine-select {
+        padding: 0.875rem 1rem;
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+    
+    /* Radio Cards Mobile */
+    .spiralengine-radio-cards {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .spiralengine-radio-card-content {
+        display: flex;
+        align-items: center;
+        text-align: left;
+        padding: 1rem;
+    }
+    
+    .spiralengine-radio-icon {
+        font-size: 1.25rem;
+        margin-bottom: 0;
+        margin-right: 0.75rem;
+    }
+    
+    /* Assessment Container Mobile */
+    .spiralengine-assessment-container {
+        padding: 1.5rem;
+        margin: 0 -0.5rem;
+    }
+    
+    .spiralengine-question-title {
+        font-size: 1.125rem;
+    }
+    
+    .spiralengine-question-description {
+        font-size: 0.875rem;
+    }
+    
+    /* Scale Options Mobile */
+    .spiralengine-scale-options {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+    
+    .spiralengine-scale-card {
+        padding: 1.25rem 0.75rem;
+    }
+    
+    .spiralengine-scale-value {
+        font-size: 1.25rem;
+    }
+    
+    .spiralengine-scale-label {
+        font-size: 0.75rem;
+    }
+    
+    /* Assessment Summary Mobile */
+    .spiralengine-assessment-summary {
+        padding: 1.5rem;
+    }
+    
+    .spiralengine-score-circle {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .spiralengine-score-circle .spiralengine-score-value {
+        font-size: 2rem;
+    }
+    
+    /* Review Container Mobile */
+    .spiralengine-review-container {
+        padding: 1.5rem;
+        margin: 0 -0.5rem;
+    }
+    
+    .spiralengine-review-section {
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+    }
+    
+    .spiralengine-review-section-title {
+        font-size: 1rem;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .spiralengine-edit-section {
+        margin-top: 0.5rem;
+        font-size: 0.813rem;
+    }
+    
+    .spiralengine-review-item {
+        flex-direction: column;
+        padding: 0.75rem 0;
+    }
+    
+    .spiralengine-review-label {
+        margin-bottom: 0.25rem;
+    }
+    
+    /* Score Breakdown Mobile */
+    .spiralengine-breakdown-items {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+    
+    /* Crisis Message Mobile */
+    .spiralengine-crisis-message {
+        padding: 1.25rem;
+    }
+    
+    .spiralengine-crisis-resources {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .spiralengine-crisis-link {
+        text-align: center;
+        display: block;
+    }
+    
+    /* Membership Card Mobile */
+    .spiralengine-membership-card {
+        padding: 1.5rem;
+    }
+    
+    .spiralengine-membership-icon {
+        font-size: 2.5rem;
+    }
+    
+    .spiralengine-membership-name {
+        font-size: 1.25rem;
+    }
+    
+    .spiralengine-membership-features {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+    
+    /* Privacy Notice Mobile */
+    .spiralengine-consent-items {
+        margin-bottom: 1rem;
+    }
+    
+    .spiralengine-checkbox-text {
+        font-size: 0.875rem;
+    }
+    
+    .spiralengine-privacy-notice {
+        padding: 0.875rem;
+    }
+    
+    .spiralengine-privacy-notice p {
+        font-size: 0.75rem;
+        line-height: 1.5;
+    }
+    
+    /* Buttons Mobile */
+    .spiralengine-button {
+        padding: 0.875rem 1.25rem;
+        font-size: 0.938rem;
+        width: 100%;
+    }
+    
+    .spiralengine-button-large {
+        padding: 1rem 1.5rem;
+        font-size: 1rem;
+    }
+    
+    /* Step Navigation Mobile */
+    .spiralengine-step-navigation {
+        flex-direction: column-reverse;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+    }
+    
+    .spiralengine-step-navigation .spiralengine-button {
+        width: 100%;
+    }
+    
+    .spiralengine-step-navigation .spiralengine-button-secondary {
+        order: 2;
+    }
+    
+    /* Success Animation Mobile */
+    .spiralengine-animation-container {
+        padding: 1.5rem;
+    }
+    
+    .spiralengine-spiral-wrapper {
+        width: 150px;
+        height: 150px;
+    }
+    
+    .spiralengine-spiral-wrapper svg {
+        width: 150px;
+        height: 150px;
+    }
+    
+    .spiralengine-progress-title {
+        font-size: 1.5rem;
+    }
+    
+    /* Messages Mobile */
+    .spiralengine-error-message,
+    .spiralengine-success-message {
+        font-size: 0.813rem;
+        padding: 0.625rem 0.875rem;
+    }
+}
+
+/* Small Mobile Adjustments */
+@media (max-width: 480px) {
+    .spiralengine-signup-container {
+        padding: 1rem;
+    }
+    
+    /* Extra small progress steps */
+    .spiralengine-progress-step .step-label {
+        display: none;
+    }
+    
+    .spiralengine-progress-step .step-number {
+        width: 24px;
+        height: 24px;
+        font-size: 0.75rem;
+    }
+    
+    /* Compact form elements */
+    .spiralengine-form-group {
+        margin-bottom: 1.25rem;
+    }
+    
+    .spiralengine-input,
+    .spiralengine-select {
+        padding: 0.75rem 0.875rem;
+    }
+    
+    /* Single column scale options */
+    .spiralengine-scale-options {
+        grid-template-columns: 1fr;
+    }
+    
+    .spiralengine-scale-card {
+        display: flex;
+        align-items: center;
+        text-align: left;
+        padding: 1rem;
+    }
+    
+    .spiralengine-scale-value {
+        font-size: 1.125rem;
+        margin-right: 1rem;
+        margin-bottom: 0;
+        min-width: 2rem;
+        text-align: center;
+    }
+    
+    .spiralengine-scale-label {
+        font-size: 0.875rem;
+    }
+    
+    /* Compact assessment */
+    .spiralengine-assessment-container {
+        padding: 1rem;
+    }
+    
+    .spiralengine-question-title {
+        font-size: 1rem;
+    }
+    
+    /* Smaller score circle */
+    .spiralengine-score-circle {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .spiralengine-score-circle .spiralengine-score-value {
+        font-size: 1.5rem;
+    }
+    
+    .spiralengine-score-circle .spiralengine-score-label {
+        font-size: 0.625rem;
+    }
+    
+    /* Compact buttons */
+    .spiralengine-button {
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+    }
+}
+
+/* Touch-friendly adjustments */
+@media (hover: none) and (pointer: coarse) {
+    /* Larger touch targets */
+    .spiralengine-checkbox-custom {
+        width: 24px;
+        height: 24px;
+        min-width: 24px;
+    }
+    
+    .spiralengine-scale-card {
+        min-height: 60px;
+    }
+    
+    .spiralengine-radio-card-content {
+        min-height: 60px;
+    }
+    
+    /* Remove hover effects on touch devices */
+    .spiralengine-button:hover {
+        background: inherit;
+    }
+    
+    .spiralengine-button-primary:active {
+        background: #5B21B6;
+    }
+    
+    .spiralengine-button-secondary:active {
+        background: #D1D5DB;
+    }
+    
+    /* Better touch feedback */
+    .spiralengine-scale-option:active .spiralengine-scale-card {
+        transform: scale(0.98);
+    }
+    
+    .spiralengine-radio-card:active .spiralengine-radio-card-content {
+        transform: scale(0.98);
+    }
+}
+
+/* Landscape adjustments for small devices */
+@media (max-height: 600px) and (orientation: landscape) {
+    .spiralengine-signup-container {
+        padding: 1rem;
+    }
+    
+    .spiralengine-progress-bar {
+        margin-bottom: 1rem;
+    }
+    
+    .spiralengine-step-title {
+        font-size: 1.25rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .spiralengine-step-description {
+        display: none;
+    }
+    
+    .spiralengine-form-group {
+        margin-bottom: 1rem;
+    }
+    
+    .spiralengine-assessment-container {
+        padding: 1rem;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .spiralengine-input,
+    .spiralengine-select {
+        border-width: 2px;
+    }
+    
+    .spiralengine-button {
+        border: 2px solid currentColor;
+    }
+    
+    .spiralengine-scale-card,
+    .spiralengine-radio-card-content {
+        border-width: 3px;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    
+    .spiralengine-step.active {
+        animation: none;
+    }
+    
+    .spiralengine-assessment-question.active {
+        animation: none;
+    }
+}
+
+/* Print styles */
+@media print {
+    .spiralengine-signup-container {
+        box-shadow: none;
+        border: 1px solid #000;
+    }
+    
+    .spiralengine-button,
+    .spiralengine-edit-section,
+    .spiralengine-step-navigation {
+        display: none;
+    }
+    
+    .spiralengine-step {
+        display: block !important;
+        page-break-inside: avoid;
+    }
+}

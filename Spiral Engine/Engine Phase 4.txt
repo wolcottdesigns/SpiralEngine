@@ -1,0 +1,315 @@
+# SPIRAL Engine Phase 4 - MemberPress Integration Setup Instructions
+
+## Overview
+Phase 4 implements comprehensive MemberPress Pro integration with a 5-tier membership system (Discovery, Explorer, Pioneer, Navigator, Voyager), feature gating, access control, and upgrade prompts throughout the SPIRAL Engine platform.
+
+## Prerequisites
+- WordPress 5.8+
+- MemberPress Pro (latest version)
+- SPIRAL Engine Core (Phases 1-3 installed)
+- PHP 7.4+ with JSON support
+- MySQL 5.7+ or MariaDB 10.3+
+
+## File Structure
+```
+spiralengine/
+├── includes/
+│   ├── integrations/
+│   │   └── class-spiralengine-memberpress.php
+│   ├── widgets/
+│   │   └── class-spiralengine-upgrade-prompts.php
+│   ├── class-spiralengine-access-control.php
+│   └── class-spiralengine-feature-gates.php
+├── admin/
+│   └── views/
+│       ├── memberpress-mapping.php
+│       └── feature-gates.php
+├── assets/
+│   ├── js/
+│   │   ├── spiralengine-restrictions.js
+│   │   └── upgrade-prompts.js
+│   └── css/
+│       └── spiralengine-restrictions.css
+└── database/
+    └── phase4-schema.sql
+```
+
+## Installation Steps
+
+### Step 1: Upload Files
+1. Upload all PHP files to their respective directories
+2. Upload JavaScript files to `assets/js/`
+3. Upload CSS file to `assets/css/`
+4. Ensure proper file permissions (644 for files, 755 for directories)
+
+### Step 2: Database Setup
+1. Run the database schema SQL file:
+```sql
+-- Replace {prefix} with your WordPress table prefix (usually wp_)
+-- Run each CREATE TABLE statement from phase4-schema.sql
+```
+
+2. Verify all tables were created:
+- `{prefix}spiralengine_membership_log`
+- `{prefix}spiralengine_access_log`
+- `{prefix}spiralengine_upgrade_analytics`
+- `{prefix}spiralengine_api_rate_limits`
+- `{prefix}spiralengine_feature_overrides`
+- `{prefix}spiralengine_restriction_events`
+- `{prefix}spiralengine_membership_cache`
+- `{prefix}spiralengine_ab_test_results`
+- `{prefix}spiralengine_user_storage`
+- `{prefix}spiralengine_ai_usage`
+
+### Step 3: Update Main Plugin File
+Add the following to your main `spiralengine.php` file:
+
+```php
+// In the includes section
+require_once SPIRALENGINE_PATH . 'includes/integrations/class-spiralengine-memberpress.php';
+require_once SPIRALENGINE_PATH . 'includes/class-spiralengine-access-control.php';
+require_once SPIRALENGINE_PATH . 'includes/widgets/class-spiralengine-upgrade-prompts.php';
+require_once SPIRALENGINE_PATH . 'includes/class-spiralengine-feature-gates.php';
+
+// In the enqueue scripts function
+wp_enqueue_style(
+    'spiralengine-restrictions',
+    SPIRALENGINE_URL . 'assets/css/spiralengine-restrictions.css',
+    array(),
+    SPIRALENGINE_VERSION
+);
+
+wp_enqueue_script(
+    'spiralengine-restrictions',
+    SPIRALENGINE_URL . 'assets/js/spiralengine-restrictions.js',
+    array('jquery'),
+    SPIRALENGINE_VERSION,
+    true
+);
+
+// Localize script with user data
+$user_data = array(
+    'tier' => 'discovery',
+    'tierLevel' => 0,
+    'features' => array()
+);
+
+if (is_user_logged_in()) {
+    $memberpress = SpiralEngine_MemberPress::get_instance();
+    $user_tier = $memberpress->get_user_tier(get_current_user_id());
+    $tier_info = $memberpress->get_tier_info($user_tier);
+    
+    $user_data = array(
+        'tier' => $user_tier,
+        'tierLevel' => $tier_info['level'],
+        'features' => array_keys(SpiralEngine_Access_Control::get_instance()->get_user_features())
+    );
+}
+
+wp_localize_script('spiralengine-restrictions', 'spiralengineUser', $user_data);
+wp_localize_script('spiralengine-restrictions', 'spiralengineAjax', array(
+    'url' => admin_url('admin-ajax.php'),
+    'nonce' => wp_create_nonce('spiralengine_ajax_nonce')
+));
+```
+
+### Step 4: MemberPress Configuration
+
+1. **Create 5 Membership Levels in MemberPress:**
+   - Discovery (Free/Trial)
+   - Explorer ($X/month)
+   - Pioneer ($X/month)
+   - Navigator ($X/month)
+   - Voyager ($X/month)
+
+2. **Configure Upgrade/Downgrade Paths:**
+   - Set up upgrade paths between tiers
+   - Configure proration settings
+   - Set up downgrade rules
+
+3. **Map Memberships to SPIRAL Engine Tiers:**
+   - Go to SPIRAL Engine > MemberPress in WordPress admin
+   - Map each MemberPress membership to the corresponding tier
+   - Save mappings
+
+### Step 5: Feature Configuration
+
+1. **Configure Feature Gates:**
+   - Navigate to SPIRAL Engine > Feature Gates
+   - Review default feature assignments
+   - Add any custom dynamic assignments
+
+2. **Set Up Widget Restrictions:**
+   - Widgets will automatically apply restrictions based on user tier
+   - Configure which sections should be blurred, hidden, or partially shown
+
+3. **Configure Upgrade Prompts:**
+   - A/B test variants are automatically assigned to users
+   - Monitor performance in the analytics dashboard
+
+### Step 6: Testing
+
+1. **Test Each Tier:**
+   - Create test users for each membership tier
+   - Verify feature access for each tier
+   - Test upgrade/downgrade flows
+
+2. **Test Restrictions:**
+   - Verify blur effects work correctly
+   - Test modal popups and upgrade prompts
+   - Ensure JavaScript restrictions work
+
+3. **Test API Limits:**
+   - For Voyager tier, test API access
+   - Verify rate limiting works correctly
+
+## Usage Examples
+
+### Checking Feature Access in PHP
+```php
+$access_control = SpiralEngine_Access_Control::get_instance();
+$user_id = get_current_user_id();
+
+// Check single feature
+$can_access = $access_control->check_feature_access('pattern_detection', $user_id);
+
+if (!$can_access['has_access']) {
+    echo 'Upgrade to ' . $can_access['required_tier'] . ' to access this feature';
+}
+
+// Get all user features
+$features = $access_control->get_user_features($user_id);
+```
+
+### Adding Dynamic Feature Assignment
+```php
+$feature_gates = SpiralEngine_Feature_Gates::get_instance();
+
+// Grant temporary access to a user
+$feature_gates->add_dynamic_assignment(
+    'ai_forecast',     // feature
+    'user',           // type
+    123,              // user_id
+    30                // days until expiration
+);
+```
+
+### Implementing Restrictions in Templates
+```php
+// In your template file
+$user_tier = $memberpress->get_user_tier(get_current_user_id());
+
+if (!$access_control->check_feature_access('advanced_analytics')['has_access']) {
+    ?>
+    <div data-requires-tier="pioneer" data-restriction-type="blur" data-feature="advanced_analytics">
+        <!-- Your premium content here -->
+    </div>
+    <?php
+} else {
+    // Show full content
+}
+```
+
+### Adding Upgrade Prompts
+```php
+// Trigger an upgrade prompt
+do_action('spiralengine_render_upgrade_prompt', 'pattern_detection', array(
+    'show_preview' => true
+));
+```
+
+## Hooks and Filters
+
+### Actions
+- `spiralengine_membership_updated` - Fired when user's membership changes
+- `spiralengine_render_upgrade_prompt` - Display an upgrade prompt
+- `spiralengine_feature_gate_applied` - When a feature gate is enforced
+
+### Filters
+- `spiralengine_can_access_feature` - Override feature access
+- `spiralengine_widget_section_access` - Modify widget section access
+- `spiralengine_feature_gates` - Modify feature gate definitions
+- `spiralengine_tier_features` - Customize tier feature matrix
+
+## Troubleshooting
+
+### Common Issues
+
+1. **MemberPress Not Detected**
+   - Ensure MemberPress Pro is installed and activated
+   - Check that MEPR_VERSION constant is defined
+
+2. **Features Not Restricting**
+   - Clear all caches (WordPress, browser, CDN)
+   - Check JavaScript console for errors
+   - Verify user tier is correctly detected
+
+3. **Database Errors**
+   - Ensure all tables were created successfully
+   - Check WordPress debug log for SQL errors
+   - Verify database user has CREATE/ALTER permissions
+
+### Debug Mode
+Add to `wp-config.php`:
+```php
+define('SPIRALENGINE_DEBUG', true);
+```
+
+This will enable detailed logging for troubleshooting.
+
+## Performance Optimization
+
+1. **Caching**
+   - User tier calculations are cached in memory and database
+   - Feature access checks are cached per request
+   - Clear caches when mappings change
+
+2. **Database Optimization**
+   - Run the cleanup procedure regularly:
+   ```sql
+   CALL {prefix}spiralengine_cleanup_expired_data();
+   ```
+   - Add to WP-Cron for automatic cleanup
+
+3. **JavaScript Optimization**
+   - Restrictions are applied progressively
+   - Lazy loading for upgrade modals
+   - Debounced tracking events
+
+## Security Considerations
+
+1. **Access Control**
+   - All feature checks happen server-side
+   - JavaScript restrictions are for UX only
+   - API endpoints verify tier access
+
+2. **Data Protection**
+   - User tier data is sanitized
+   - SQL queries use prepared statements
+   - Nonces protect AJAX endpoints
+
+## Next Steps
+
+1. **Configure Pricing**
+   - Set up your MemberPress pricing
+   - Configure payment gateways
+   - Set up email notifications
+
+2. **Customize Messaging**
+   - Modify upgrade prompt text
+   - Customize restriction messages
+   - Translate strings if needed
+
+3. **Monitor Analytics**
+   - Track conversion rates
+   - Monitor A/B test performance
+   - Analyze user behavior
+
+## Support
+
+For additional support:
+- Check the SPIRAL Engine documentation
+- Review MemberPress integration guides
+- Contact support with debug logs
+
+Remember to test thoroughly in a staging environment before deploying to production!

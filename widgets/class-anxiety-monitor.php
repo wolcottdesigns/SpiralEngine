@@ -1,0 +1,992 @@
+<?php
+/**
+ * Anxiety Monitor Widget
+ *
+ * @package     SpiralEngine
+ * @subpackage  Widgets
+ * @file        widgets/class-anxiety-monitor.php
+ * @since       1.0.0
+ */
+
+// Exit if accessed directly
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+/**
+ * Anxiety Monitor Widget Class
+ *
+ * Tracks anxiety episodes with physical symptoms and triggers
+ *
+ * @since 1.0.0
+ */
+class SpiralEngine_Widget_Anxiety_Monitor extends SpiralEngine_Widget {
+    
+    /**
+     * Initialize widget
+     *
+     * @since 1.0.0
+     * @return void
+     */
+    protected function init() {
+        $this->id = 'anxiety-monitor';
+        $this->name = 'Anxiety Monitor';  // FIXED: Removed translation function
+        $this->description = 'Monitor anxiety levels, triggers, and physical symptoms';  // FIXED: Removed translation function
+        $this->icon = 'dashicons-heart';
+        $this->min_tier = 'free';
+        
+        // Additional capabilities
+        $this->capabilities = [
+            'symptom_tracking',
+            'trigger_analysis',
+            'panic_attack_log',
+            'coping_strategies'
+        ];
+        
+        // Default settings
+        $this->settings = [
+            'enable_panic_mode' => true,
+            'show_breathing_exercises' => true,
+            'track_medication' => false,
+            'emergency_contacts' => [],
+            'default_coping_strategies' => ['breathing', 'grounding', 'movement']
+        ];
+    }
+    
+    /**
+     * Get widget name
+     *
+     * @since 1.0.0
+     * @return string
+     */
+    public function get_name() {
+        return __('Anxiety Monitor', 'spiralengine');
+    }
+    
+    /**
+     * Get widget description
+     *
+     * @since 1.0.0
+     * @return string
+     */
+    public function get_description() {
+        return __('Monitor anxiety levels, triggers, and physical symptoms', 'spiralengine');
+    }
+    
+    /**
+     * Render widget form
+     *
+     * @since 1.0.0
+     * @param array $args Form arguments
+     * @return string HTML output
+     */
+    public function render_form($args = []) {
+        $args = wp_parse_args($args, [
+            'mode' => 'full',
+            'panic_mode' => false
+        ]);
+        
+        $user_id = get_current_user_id();
+        $membership = new SpiralEngine_Membership($user_id);
+        $tier = $membership->get_tier();
+        
+        ob_start();
+        ?>
+        <div class="spiralengine-widget-form spiralengine-anxiety-form <?php echo $args['panic_mode'] ? 'panic-mode' : ''; ?>" 
+             data-widget="<?php echo esc_attr($this->id); ?>">
+            
+            <?php if ($args['panic_mode']): ?>
+            <!-- Panic Mode Quick Relief -->
+            <div class="spiralengine-panic-relief">
+                <h3><?php _e('Quick Relief Tools', 'spiralengine'); ?></h3>
+                
+                <div class="relief-tools">
+                    <button class="button button-large spiralengine-breathing-tool">
+                        <span class="dashicons dashicons-backup"></span>
+                        <?php _e('Breathing Exercise', 'spiralengine'); ?>
+                    </button>
+                    
+                    <button class="button button-large spiralengine-grounding-tool">
+                        <span class="dashicons dashicons-admin-site-alt3"></span>
+                        <?php _e('5-4-3-2-1 Grounding', 'spiralengine'); ?>
+                    </button>
+                    
+                    <?php if (!empty($this->settings['emergency_contacts'])): ?>
+                    <button class="button button-large spiralengine-contact-help">
+                        <span class="dashicons dashicons-phone"></span>
+                        <?php _e('Contact Support', 'spiralengine'); ?>
+                    </button>
+                    <?php endif; ?>
+                </div>
+                
+                <div class="breathing-exercise" style="display: none;">
+                    <div class="breath-circle">
+                        <div class="breath-text"><?php _e('Breathe In', 'spiralengine'); ?></div>
+                    </div>
+                    <p class="breath-instructions"><?php _e('Follow the circle. Breathe in for 4, hold for 4, out for 4.', 'spiralengine'); ?></p>
+                </div>
+            </div>
+            <?php endif; ?>
+            
+            <form id="spiralengine-anxiety-form" class="spiralengine-episode-form">
+                <?php wp_nonce_field('spiralengine_' . $this->id . '_nonce', 'nonce'); ?>
+                
+                <div class="spiralengine-form-section">
+                    <h4><?php _e('Current Anxiety Level', 'spiralengine'); ?></h4>
+                    
+                    <!-- Anxiety Scale with Visual Indicators -->
+                    <div class="spiralengine-anxiety-scale">
+                        <?php echo $this->render_field('range', [
+                            'id' => 'anxiety_level',
+                            'name' => 'data[anxiety_level]',
+                            'label' => __('How anxious are you feeling?', 'spiralengine'),
+                            'value' => '5',
+                            'min' => '1',
+                            'max' => '10',
+                            'step' => '1',
+                            'class' => 'spiralengine-anxiety-slider'
+                        ]); ?>
+                        
+                        <div class="anxiety-level-indicators">
+                            <span class="level-1-3"><?php _e('Mild', 'spiralengine'); ?></span>
+                            <span class="level-4-6"><?php _e('Moderate', 'spiralengine'); ?></span>
+                            <span class="level-7-8"><?php _e('Severe', 'spiralengine'); ?></span>
+                            <span class="level-9-10"><?php _e('Panic', 'spiralengine'); ?></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Description -->
+                    <?php echo $this->render_field('text', [
+                        'id' => 'anxiety_description',
+                        'name' => 'data[description]',
+                        'label' => __('What\'s making you anxious?', 'spiralengine'),
+                        'placeholder' => __('Brief description...', 'spiralengine'),
+                        'required' => true
+                    ]); ?>
+                    
+                    <!-- Panic Attack Indicator -->
+                    <?php echo $this->render_field('checkbox', [
+                        'id' => 'anxiety_panic_attack',
+                        'name' => 'data[is_panic_attack]',
+                        'label' => __('This is/was a panic attack', 'spiralengine'),
+                        'value' => '1'
+                    ]); ?>
+                </div>
+                
+                <div class="spiralengine-form-section">
+                    <h4><?php _e('Physical Symptoms', 'spiralengine'); ?></h4>
+                    
+                    <div class="spiralengine-symptoms-grid">
+                        <?php
+                        $symptoms = [
+                            'racing-heart' => ['icon' => '💓', 'label' => __('Racing heart', 'spiralengine')],
+                            'shortness-breath' => ['icon' => '😤', 'label' => __('Shortness of breath', 'spiralengine')],
+                            'sweating' => ['icon' => '💦', 'label' => __('Sweating', 'spiralengine')],
+                            'trembling' => ['icon' => '🤝', 'label' => __('Trembling/Shaking', 'spiralengine')],
+                            'chest-pain' => ['icon' => '🫁', 'label' => __('Chest pain/tightness', 'spiralengine')],
+                            'nausea' => ['icon' => '🤢', 'label' => __('Nausea', 'spiralengine')],
+                            'dizziness' => ['icon' => '😵', 'label' => __('Dizziness', 'spiralengine')],
+                            'hot-cold' => ['icon' => '🌡️', 'label' => __('Hot/Cold flashes', 'spiralengine')],
+                            'numbness' => ['icon' => '🫥', 'label' => __('Numbness/Tingling', 'spiralengine')],
+                            'unreality' => ['icon' => '🌀', 'label' => __('Feeling unreal', 'spiralengine')]
+                        ];
+                        
+                        foreach ($symptoms as $value => $symptom):
+                        ?>
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" name="data[symptoms][]" value="<?php echo esc_attr($value); ?>">
+                            <span class="symptom-icon"><?php echo $symptom['icon']; ?></span>
+                            <span class="symptom-label"><?php echo esc_html($symptom['label']); ?></span>
+                        </label>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                
+                <?php if ($args['mode'] === 'full'): ?>
+                <div class="spiralengine-form-section">
+                    <h4><?php _e('Triggers & Context', 'spiralengine'); ?></h4>
+                    
+                    <?php echo $this->render_field('select', [
+                        'id' => 'anxiety_trigger_type',
+                        'name' => 'data[trigger_type]',
+                        'label' => __('Type of trigger', 'spiralengine'),
+                        'options' => [
+                            '' => __('Select trigger type...', 'spiralengine'),
+                            'specific-event' => __('Specific event', 'spiralengine'),
+                            'general-worry' => __('General worry', 'spiralengine'),
+                            'social-situation' => __('Social situation', 'spiralengine'),
+                            'work-related' => __('Work-related', 'spiralengine'),
+                            'health-concern' => __('Health concern', 'spiralengine'),
+                            'financial' => __('Financial worry', 'spiralengine'),
+                            'relationship' => __('Relationship issue', 'spiralengine'),
+                            'no-clear-trigger' => __('No clear trigger', 'spiralengine'),
+                            'multiple' => __('Multiple triggers', 'spiralengine')
+                        ]
+                    ]); ?>
+                    
+                    <?php echo $this->render_field('textarea', [
+                        'id' => 'anxiety_trigger_details',
+                        'name' => 'data[trigger_details]',
+                        'label' => __('Describe the trigger(s)', 'spiralengine'),
+                        'placeholder' => __('What specifically triggered your anxiety?', 'spiralengine'),
+                        'rows' => 3
+                    ]); ?>
+                    
+                    <?php echo $this->render_field('select', [
+                        'id' => 'anxiety_location',
+                        'name' => 'data[location]',
+                        'label' => __('Where are you?', 'spiralengine'),
+                        'options' => [
+                            '' => __('Select location...', 'spiralengine'),
+                            'home' => __('Home', 'spiralengine'),
+                            'work' => __('Work', 'spiralengine'),
+                            'public' => __('Public place', 'spiralengine'),
+                            'social' => __('Social gathering', 'spiralengine'),
+                            'transit' => __('In transit', 'spiralengine'),
+                            'outdoors' => __('Outdoors', 'spiralengine'),
+                            'other' => __('Other', 'spiralengine')
+                        ]
+                    ]); ?>
+                    
+                    <?php if (in_array($tier, ['silver', 'gold', 'platinum'])): ?>
+                    <!-- Thought Patterns -->
+                    <div class="spiralengine-field-group">
+                        <label><?php _e('Anxious thoughts', 'spiralengine'); ?></label>
+                        <div class="spiralengine-checkbox-group">
+                            <?php
+                            $thoughts = [
+                                'catastrophizing' => __('Worst-case scenarios', 'spiralengine'),
+                                'what-if' => __('What if thinking', 'spiralengine'),
+                                'mind-reading' => __('Mind reading', 'spiralengine'),
+                                'fortune-telling' => __('Predicting disaster', 'spiralengine'),
+                                'self-criticism' => __('Self-criticism', 'spiralengine'),
+                                'perfectionism' => __('Perfectionism', 'spiralengine'),
+                                'control' => __('Need for control', 'spiralengine'),
+                                'rumination' => __('Ruminating', 'spiralengine')
+                            ];
+                            
+                            foreach ($thoughts as $value => $label):
+                            ?>
+                            <label>
+                                <input type="checkbox" name="data[thought_patterns][]" value="<?php echo esc_attr($value); ?>">
+                                <?php echo esc_html($label); ?>
+                            </label>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                
+                <div class="spiralengine-form-section">
+                    <h4><?php _e('Coping & Management', 'spiralengine'); ?></h4>
+                    
+                    <!-- What Helped -->
+                    <div class="spiralengine-field-group">
+                        <label><?php _e('What helped or might help?', 'spiralengine'); ?></label>
+                        <div class="spiralengine-checkbox-group spiralengine-coping-grid">
+                            <?php
+                            $coping = [
+                                'breathing' => __('Deep breathing', 'spiralengine'),
+                                'grounding' => __('Grounding techniques', 'spiralengine'),
+                                'movement' => __('Movement/Exercise', 'spiralengine'),
+                                'distraction' => __('Distraction', 'spiralengine'),
+                                'talking' => __('Talking to someone', 'spiralengine'),
+                                'meditation' => __('Meditation/Mindfulness', 'spiralengine'),
+                                'medication' => __('Medication', 'spiralengine'),
+                                'cold-water' => __('Cold water', 'spiralengine'),
+                                'music' => __('Music', 'spiralengine'),
+                                'nature' => __('Nature/Fresh air', 'spiralengine'),
+                                'journaling' => __('Journaling', 'spiralengine'),
+                                'rest' => __('Rest/Sleep', 'spiralengine')
+                            ];
+                            
+                            foreach ($coping as $value => $label):
+                            ?>
+                            <label>
+                                <input type="checkbox" name="data[coping_strategies][]" value="<?php echo esc_attr($value); ?>">
+                                <?php echo esc_html($label); ?>
+                            </label>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    
+                    <?php if (in_array($tier, ['gold', 'platinum'])): ?>
+                    <!-- Duration Tracking -->
+                    <?php echo $this->render_field('select', [
+                        'id' => 'anxiety_duration',
+                        'name' => 'data[duration]',
+                        'label' => __('How long did it last?', 'spiralengine'),
+                        'options' => [
+                            '' => __('Still ongoing', 'spiralengine'),
+                            'few-minutes' => __('A few minutes', 'spiralengine'),
+                            '5-10-minutes' => __('5-10 minutes', 'spiralengine'),
+                            '10-20-minutes' => __('10-20 minutes', 'spiralengine'),
+                            '20-30-minutes' => __('20-30 minutes', 'spiralengine'),
+                            '30-60-minutes' => __('30-60 minutes', 'spiralengine'),
+                            'over-hour' => __('Over an hour', 'spiralengine'),
+                            'multiple-hours' => __('Multiple hours', 'spiralengine')
+                        ]
+                    ]); ?>
+                    
+                    <!-- Post-Episode Rating -->
+                    <?php echo $this->render_field('range', [
+                        'id' => 'anxiety_post_level',
+                        'name' => 'data[post_anxiety_level]',
+                        'label' => __('Anxiety level after coping', 'spiralengine'),
+                        'value' => '',
+                        'min' => '1',
+                        'max' => '10',
+                        'step' => '1',
+                        'description' => __('Leave blank if episode is ongoing', 'spiralengine')
+                    ]); ?>
+                    <?php endif; ?>
+                    
+                    <!-- Additional Notes -->
+                    <?php echo $this->render_field('textarea', [
+                        'id' => 'anxiety_notes',
+                        'name' => 'data[notes]',
+                        'label' => __('Additional notes', 'spiralengine'),
+                        'placeholder' => __('Any other observations or thoughts...', 'spiralengine'),
+                        'rows' => 2
+                    ]); ?>
+                    
+                    <?php if ($tier === 'platinum'): ?>
+                    <!-- Professional Support -->
+                    <?php echo $this->render_field('checkbox', [
+                        'id' => 'anxiety_professional',
+                        'name' => 'data[need_professional_support]',
+                        'label' => __('I think I need professional support for this', 'spiralengine'),
+                        'value' => '1'
+                    ]); ?>
+                    
+                    <?php echo $this->render_field('checkbox', [
+                        'id' => 'anxiety_ai_support',
+                        'name' => 'data[request_ai_support]',
+                        'label' => __('Request AI-powered coping suggestions', 'spiralengine'),
+                        'value' => '1'
+                    ]); ?>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
+                
+                <div class="spiralengine-form-actions">
+                    <button type="submit" class="button button-primary spiralengine-save-episode">
+                        <span class="dashicons dashicons-saved"></span>
+                        <?php _e('Save Episode', 'spiralengine'); ?>
+                    </button>
+                    
+                    <?php if ($this->get_setting('enable_panic_mode') && !$args['panic_mode']): ?>
+                    <button type="button" class="button button-secondary spiralengine-panic-mode">
+                        <span class="dashicons dashicons-warning"></span>
+                        <?php _e('Panic Mode', 'spiralengine'); ?>
+                    </button>
+                    <?php endif; ?>
+                    
+                    <?php if ($args['mode'] === 'full'): ?>
+                    <button type="button" class="button spiralengine-view-trends">
+                        <span class="dashicons dashicons-chart-area"></span>
+                        <?php _e('View Trends', 'spiralengine'); ?>
+                    </button>
+                    <?php endif; ?>
+                </div>
+            </form>
+            
+            <?php if ($this->get_setting('show_breathing_exercises')): ?>
+            <div class="spiralengine-coping-toolkit" style="display: none;">
+                <h4><?php _e('Coping Toolkit', 'spiralengine'); ?></h4>
+                
+                <div class="toolkit-cards">
+                    <div class="toolkit-card" data-tool="breathing">
+                        <h5><?php _e('4-7-8 Breathing', 'spiralengine'); ?></h5>
+                        <p><?php _e('Breathe in for 4, hold for 7, out for 8', 'spiralengine'); ?></p>
+                    </div>
+                    
+                    <div class="toolkit-card" data-tool="grounding">
+                        <h5><?php _e('5-4-3-2-1 Grounding', 'spiralengine'); ?></h5>
+                        <p><?php _e('Name 5 things you see, 4 you touch, 3 you hear, 2 you smell, 1 you taste', 'spiralengine'); ?></p>
+                    </div>
+                    
+                    <div class="toolkit-card" data-tool="progressive">
+                        <h5><?php _e('Progressive Relaxation', 'spiralengine'); ?></h5>
+                        <p><?php _e('Tense and release each muscle group', 'spiralengine'); ?></p>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+        </div>
+        <?php
+        
+        return ob_get_clean();
+    }
+    
+    /**
+     * Validate episode data
+     *
+     * @since 1.0.0
+     * @param array $data Raw form data
+     * @return array|WP_Error Validated data or error
+     */
+    public function validate_data($data) {
+        $errors = [];
+        $validated = [];
+        
+        // Validate anxiety level (required)
+        $level = isset($data['anxiety_level']) ? intval($data['anxiety_level']) : 0;
+        if ($level < 1 || $level > 10) {
+            $errors['anxiety_level'] = __('Please select your anxiety level.', 'spiralengine');
+        } else {
+            $validated['anxiety_level'] = $level;
+            $validated['severity'] = $level; // Direct mapping for anxiety
+        }
+        
+        // Validate description
+        if (empty($data['description'])) {
+            $errors['description'] = __('Please describe what\'s making you anxious.', 'spiralengine');
+        } else {
+            $validated['description'] = sanitize_text_field($data['description']);
+        }
+        
+        // Validate panic attack indicator
+        $validated['is_panic_attack'] = !empty($data['is_panic_attack']);
+        
+        // Validate symptoms
+        if (!empty($data['symptoms']) && is_array($data['symptoms'])) {
+            $valid_symptoms = [
+                'racing-heart', 'shortness-breath', 'sweating', 'trembling',
+                'chest-pain', 'nausea', 'dizziness', 'hot-cold',
+                'numbness', 'unreality'
+            ];
+            $validated['symptoms'] = array_intersect($data['symptoms'], $valid_symptoms);
+        }
+        
+        // Validate trigger type
+        if (!empty($data['trigger_type'])) {
+            $valid_triggers = [
+                'specific-event', 'general-worry', 'social-situation',
+                'work-related', 'health-concern', 'financial',
+                'relationship', 'no-clear-trigger', 'multiple'
+            ];
+            if (in_array($data['trigger_type'], $valid_triggers)) {
+                $validated['trigger_type'] = $data['trigger_type'];
+            }
+        }
+        
+        // Validate trigger details
+        if (!empty($data['trigger_details'])) {
+            $validated['trigger_details'] = sanitize_textarea_field($data['trigger_details']);
+        }
+        
+        // Validate location
+        if (!empty($data['location'])) {
+            $valid_locations = ['home', 'work', 'public', 'social', 'transit', 'outdoors', 'other'];
+            if (in_array($data['location'], $valid_locations)) {
+                $validated['location'] = $data['location'];
+            }
+        }
+        
+        // Validate thought patterns
+        if (!empty($data['thought_patterns']) && is_array($data['thought_patterns'])) {
+            $valid_thoughts = [
+                'catastrophizing', 'what-if', 'mind-reading', 'fortune-telling',
+                'self-criticism', 'perfectionism', 'control', 'rumination'
+            ];
+            $validated['thought_patterns'] = array_intersect($data['thought_patterns'], $valid_thoughts);
+        }
+        
+        // Validate coping strategies
+        if (!empty($data['coping_strategies']) && is_array($data['coping_strategies'])) {
+            $valid_coping = [
+                'breathing', 'grounding', 'movement', 'distraction',
+                'talking', 'meditation', 'medication', 'cold-water',
+                'music', 'nature', 'journaling', 'rest'
+            ];
+            $validated['coping_strategies'] = array_intersect($data['coping_strategies'], $valid_coping);
+        }
+        
+        // Validate duration
+        if (!empty($data['duration'])) {
+            $valid_durations = [
+                'few-minutes', '5-10-minutes', '10-20-minutes',
+                '20-30-minutes', '30-60-minutes', 'over-hour',
+                'multiple-hours'
+            ];
+            if (in_array($data['duration'], $valid_durations)) {
+                $validated['duration'] = $data['duration'];
+            }
+        }
+        
+        // Validate post anxiety level
+        if (isset($data['post_anxiety_level']) && $data['post_anxiety_level'] !== '') {
+            $post_level = intval($data['post_anxiety_level']);
+            if ($post_level >= 1 && $post_level <= 10) {
+                $validated['post_anxiety_level'] = $post_level;
+            }
+        }
+        
+        // Validate notes
+        if (!empty($data['notes'])) {
+            $validated['notes'] = sanitize_textarea_field($data['notes']);
+        }
+        
+        // Validate support indicators
+        $validated['need_professional_support'] = !empty($data['need_professional_support']);
+        $validated['request_ai_support'] = !empty($data['request_ai_support']);
+        
+        // Return errors if any
+        if (!empty($errors)) {
+            return new WP_Error('validation_failed', __('Please fix the errors below.', 'spiralengine'), $errors);
+        }
+        
+        return $validated;
+    }
+    
+    /**
+     * Prepare metadata before saving
+     *
+     * @since 1.0.0
+     * @param array $metadata Base metadata
+     * @param array $data Episode data
+     * @return array Modified metadata
+     */
+    protected function prepare_metadata($metadata, $data) {
+        // Add episode type
+        $metadata['episode_type'] = $data['is_panic_attack'] ? 'panic_attack' : 'anxiety_episode';
+        
+        // Calculate symptom severity
+        $symptom_count = isset($data['symptoms']) ? count($data['symptoms']) : 0;
+        $metadata['symptom_severity'] = min(10, round($symptom_count * 2));
+        
+        // Track effectiveness of coping strategies
+        if (isset($data['post_anxiety_level']) && isset($data['anxiety_level'])) {
+            $reduction = $data['anxiety_level'] - $data['post_anxiety_level'];
+            $metadata['anxiety_reduction'] = $reduction;
+            $metadata['coping_effectiveness'] = round(($reduction / $data['anxiety_level']) * 100);
+        }
+        
+        // Add time context
+        $hour = intval(date('H'));
+        $metadata['time_of_day'] = $this->get_time_of_day($hour);
+        $metadata['is_weekend'] = in_array(date('w'), [0, 6]);
+        
+        // Track if professional support needed
+        $metadata['requires_attention'] = $data['need_professional_support'] || $data['anxiety_level'] >= 8;
+        
+        return $metadata;
+    }
+    
+    /**
+     * Get time of day category
+     *
+     * @since 1.0.0
+     * @param int $hour Hour of day
+     * @return string
+     */
+    private function get_time_of_day($hour) {
+        if ($hour >= 5 && $hour < 12) return 'morning';
+        if ($hour >= 12 && $hour < 17) return 'afternoon';
+        if ($hour >= 17 && $hour < 21) return 'evening';
+        return 'night';
+    }
+    
+    /**
+     * Render analytics for user
+     *
+     * @since 1.0.0
+     * @param int $user_id User ID
+     * @return string HTML output
+     */
+    public function render_analytics($user_id) {
+        global $wpdb;
+        
+        $table = $wpdb->prefix . 'spiralengine_episodes';
+        $days = 30;
+        
+        // Get anxiety episodes
+        $episodes = $wpdb->get_results($wpdb->prepare(
+            "SELECT data, metadata, created_at FROM {$table} 
+            WHERE user_id = %d 
+            AND widget_id = %s 
+            AND created_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
+            ORDER BY created_at DESC",
+            $user_id, $this->id, $days
+        ));
+        
+        // Process data
+        $total_episodes = count($episodes);
+        $panic_attacks = 0;
+        $avg_anxiety = 0;
+        $common_symptoms = [];
+        $common_triggers = [];
+        $effective_coping = [];
+        $time_patterns = [];
+        $location_data = [];
+        
+        foreach ($episodes as $episode) {
+            $data = json_decode($episode->data, true);
+            $metadata = json_decode($episode->metadata, true);
+            
+            // Count panic attacks
+            if (!empty($data['is_panic_attack'])) {
+                $panic_attacks++;
+            }
+            
+            // Average anxiety level
+            $avg_anxiety += $data['anxiety_level'];
+            
+            // Track symptoms
+            if (!empty($data['symptoms'])) {
+                foreach ($data['symptoms'] as $symptom) {
+                    $common_symptoms[$symptom] = ($common_symptoms[$symptom] ?? 0) + 1;
+                }
+            }
+            
+            // Track triggers
+            if (!empty($data['trigger_type'])) {
+                $common_triggers[$data['trigger_type']] = ($common_triggers[$data['trigger_type']] ?? 0) + 1;
+            }
+            
+            // Track effective coping strategies
+            if (!empty($data['coping_strategies']) && !empty($metadata['anxiety_reduction']) && $metadata['anxiety_reduction'] > 0) {
+                foreach ($data['coping_strategies'] as $strategy) {
+                    if (!isset($effective_coping[$strategy])) {
+                        $effective_coping[$strategy] = ['count' => 0, 'total_reduction' => 0];
+                    }
+                    $effective_coping[$strategy]['count']++;
+                    $effective_coping[$strategy]['total_reduction'] += $metadata['anxiety_reduction'];
+                }
+            }
+            
+            // Time patterns
+            if (!empty($metadata['time_of_day'])) {
+                $time_patterns[$metadata['time_of_day']] = ($time_patterns[$metadata['time_of_day']] ?? 0) + 1;
+            }
+            
+            // Location patterns
+            if (!empty($data['location'])) {
+                $location_data[$data['location']] = ($location_data[$data['location']] ?? 0) + 1;
+            }
+        }
+        
+        $avg_anxiety = $total_episodes > 0 ? $avg_anxiety / $total_episodes : 0;
+        
+        ob_start();
+        ?>
+        <div class="spiralengine-widget-analytics spiralengine-anxiety-analytics">
+            <h3><?php echo esc_html($this->get_name()); ?> <?php _e('Analytics', 'spiralengine'); ?></h3>
+            
+            <div class="spiralengine-stats-grid">
+                <div class="stat-card">
+                    <span class="stat-value"><?php echo $total_episodes; ?></span>
+                    <span class="stat-label"><?php _e('Total Episodes', 'spiralengine'); ?></span>
+                </div>
+                
+                <div class="stat-card <?php echo $panic_attacks > 0 ? 'warning' : ''; ?>">
+                    <span class="stat-value"><?php echo $panic_attacks; ?></span>
+                    <span class="stat-label"><?php _e('Panic Attacks', 'spiralengine'); ?></span>
+                </div>
+                
+                <div class="stat-card">
+                    <span class="stat-value"><?php echo number_format($avg_anxiety, 1); ?>/10</span>
+                    <span class="stat-label"><?php _e('Average Anxiety', 'spiralengine'); ?></span>
+                </div>
+                
+                <div class="stat-card">
+                    <span class="stat-value"><?php echo $total_episodes > 0 ? round($total_episodes / $days, 1) : 0; ?></span>
+                    <span class="stat-label"><?php _e('Episodes per Day', 'spiralengine'); ?></span>
+                </div>
+            </div>
+            
+            <?php if (!empty($common_symptoms)): ?>
+            <div class="spiralengine-chart-section">
+                <h4><?php _e('Most Common Symptoms', 'spiralengine'); ?></h4>
+                <div class="spiralengine-symptom-chart">
+                    <?php
+                    arsort($common_symptoms);
+                    $symptom_labels = [
+                        'racing-heart' => __('Racing heart', 'spiralengine'),
+                        'shortness-breath' => __('Shortness of breath', 'spiralengine'),
+                        'sweating' => __('Sweating', 'spiralengine'),
+                        'trembling' => __('Trembling/Shaking', 'spiralengine'),
+                        'chest-pain' => __('Chest pain', 'spiralengine'),
+                        'nausea' => __('Nausea', 'spiralengine'),
+                        'dizziness' => __('Dizziness', 'spiralengine'),
+                        'hot-cold' => __('Hot/Cold flashes', 'spiralengine'),
+                        'numbness' => __('Numbness', 'spiralengine'),
+                        'unreality' => __('Feeling unreal', 'spiralengine')
+                    ];
+                    
+                    foreach (array_slice($common_symptoms, 0, 5, true) as $symptom => $count):
+                        $percentage = ($count / $total_episodes) * 100;
+                    ?>
+                    <div class="symptom-bar">
+                        <span class="symptom-name"><?php echo esc_html($symptom_labels[$symptom] ?? $symptom); ?></span>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: <?php echo $percentage; ?>%"></div>
+                        </div>
+                        <span class="symptom-percent"><?php echo round($percentage); ?>%</span>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+            
+            <?php if (!empty($common_triggers)): ?>
+            <div class="spiralengine-chart-section">
+                <h4><?php _e('Common Triggers', 'spiralengine'); ?></h4>
+                <div class="spiralengine-trigger-pie">
+                    <?php
+                    $trigger_labels = [
+                        'specific-event' => __('Specific event', 'spiralengine'),
+                        'general-worry' => __('General worry', 'spiralengine'),
+                        'social-situation' => __('Social situation', 'spiralengine'),
+                        'work-related' => __('Work-related', 'spiralengine'),
+                        'health-concern' => __('Health concern', 'spiralengine'),
+                        'financial' => __('Financial worry', 'spiralengine'),
+                        'relationship' => __('Relationship issue', 'spiralengine'),
+                        'no-clear-trigger' => __('No clear trigger', 'spiralengine'),
+                        'multiple' => __('Multiple triggers', 'spiralengine')
+                    ];
+                    
+                    foreach ($common_triggers as $trigger => $count):
+                        $percentage = ($count / $total_episodes) * 100;
+                    ?>
+                    <div class="trigger-item">
+                        <span class="trigger-color" style="background-color: <?php echo $this->get_color_for_index(array_search($trigger, array_keys($common_triggers))); ?>"></span>
+                        <span class="trigger-label"><?php echo esc_html($trigger_labels[$trigger] ?? $trigger); ?></span>
+                        <span class="trigger-percent"><?php echo round($percentage); ?>%</span>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+            
+            <?php if (!empty($effective_coping)): ?>
+            <div class="spiralengine-chart-section">
+                <h4><?php _e('Most Effective Coping Strategies', 'spiralengine'); ?></h4>
+                <div class="spiralengine-coping-effectiveness">
+                    <?php
+                    $coping_labels = [
+                        'breathing' => __('Deep breathing', 'spiralengine'),
+                        'grounding' => __('Grounding techniques', 'spiralengine'),
+                        'movement' => __('Movement/Exercise', 'spiralengine'),
+                        'distraction' => __('Distraction', 'spiralengine'),
+                        'talking' => __('Talking to someone', 'spiralengine'),
+                        'meditation' => __('Meditation', 'spiralengine'),
+                        'medication' => __('Medication', 'spiralengine'),
+                        'cold-water' => __('Cold water', 'spiralengine'),
+                        'music' => __('Music', 'spiralengine'),
+                        'nature' => __('Nature/Fresh air', 'spiralengine'),
+                        'journaling' => __('Journaling', 'spiralengine'),
+                        'rest' => __('Rest/Sleep', 'spiralengine')
+                    ];
+                    
+                    // Sort by average effectiveness
+                    uasort($effective_coping, function($a, $b) {
+                        $avg_a = $a['total_reduction'] / $a['count'];
+                        $avg_b = $b['total_reduction'] / $b['count'];
+                        return $avg_b <=> $avg_a;
+                    });
+                    
+                    foreach (array_slice($effective_coping, 0, 5, true) as $strategy => $data):
+                        $avg_reduction = $data['total_reduction'] / $data['count'];
+                    ?>
+                    <div class="coping-item">
+                        <span class="coping-name"><?php echo esc_html($coping_labels[$strategy] ?? $strategy); ?></span>
+                        <div class="effectiveness-bar">
+                            <div class="effectiveness-fill" style="width: <?php echo min(100, $avg_reduction * 20); ?>%"></div>
+                        </div>
+                        <span class="coping-stats">
+                            <?php printf(__('-%0.1f points (used %dx)', 'spiralengine'), $avg_reduction, $data['count']); ?>
+                        </span>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+            
+            <?php if (!empty($time_patterns)): ?>
+            <div class="spiralengine-chart-section">
+                <h4><?php _e('Anxiety by Time of Day', 'spiralengine'); ?></h4>
+                <div class="spiralengine-time-heatmap">
+                    <?php
+                    $time_labels = [
+                        'morning' => __('Morning', 'spiralengine'),
+                        'afternoon' => __('Afternoon', 'spiralengine'),
+                        'evening' => __('Evening', 'spiralengine'),
+                        'night' => __('Night', 'spiralengine')
+                    ];
+                    
+                    $max_count = max($time_patterns);
+                    foreach (['morning', 'afternoon', 'evening', 'night'] as $time):
+                        $count = $time_patterns[$time] ?? 0;
+                        $intensity = $count > 0 ? ($count / $max_count) : 0;
+                    ?>
+                    <div class="time-block" style="background-color: rgba(244, 67, 54, <?php echo $intensity * 0.8; ?>)">
+                        <span class="time-label"><?php echo esc_html($time_labels[$time]); ?></span>
+                        <span class="time-count"><?php echo $count; ?></span>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+            
+            <div class="spiralengine-analytics-actions">
+                <a href="#" class="button spiralengine-export-anxiety-data" data-widget="<?php echo esc_attr($this->id); ?>">
+                    <span class="dashicons dashicons-download"></span>
+                    <?php _e('Export Data', 'spiralengine'); ?>
+                </a>
+                
+                <a href="#" class="button spiralengine-print-report" data-widget="<?php echo esc_attr($this->id); ?>">
+                    <span class="dashicons dashicons-printer"></span>
+                    <?php _e('Print Report', 'spiralengine'); ?>
+                </a>
+                
+                <?php
+                $membership = new SpiralEngine_Membership($user_id);
+                if (in_array($membership->get_tier(), ['platinum'])):
+                ?>
+                <a href="#" class="button spiralengine-anxiety-plan" data-widget="<?php echo esc_attr($this->id); ?>">
+                    <span class="dashicons dashicons-clipboard"></span>
+                    <?php _e('Generate Action Plan', 'spiralengine'); ?>
+                </a>
+                <?php endif; ?>
+            </div>
+            
+            <?php if ($panic_attacks > 3 || $avg_anxiety > 7): ?>
+            <div class="spiralengine-alert spiralengine-alert-warning">
+                <span class="dashicons dashicons-warning"></span>
+                <p><?php _e('Your anxiety levels have been elevated. Consider speaking with a mental health professional for additional support.', 'spiralengine'); ?></p>
+            </div>
+            <?php endif; ?>
+        </div>
+        <?php
+        
+        return ob_get_clean();
+    }
+    
+    /**
+     * Get color for index
+     *
+     * @since 1.0.0
+     * @param int $index Index
+     * @return string Hex color
+     */
+    private function get_color_for_index($index) {
+        $colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', '#FF9FF3', '#54A0FF', '#48DBFB'];
+        return $colors[$index % count($colors)];
+    }
+    
+    /**
+     * Get widget data schema
+     *
+     * @since 1.0.0
+     * @return array Schema definition
+     */
+    public function get_schema() {
+        return [
+            'anxiety_level' => [
+                'type' => 'integer',
+                'label' => __('Anxiety Level', 'spiralengine'),
+                'min' => 1,
+                'max' => 10,
+                'required' => true
+            ],
+            'severity' => [
+                'type' => 'integer',
+                'label' => __('Severity', 'spiralengine'),
+                'min' => 1,
+                'max' => 10,
+                'required' => true
+            ],
+            'description' => [
+                'type' => 'string',
+                'label' => __('Description', 'spiralengine'),
+                'required' => true
+            ],
+            'is_panic_attack' => [
+                'type' => 'boolean',
+                'label' => __('Panic Attack', 'spiralengine')
+            ],
+            'symptoms' => [
+                'type' => 'array',
+                'label' => __('Physical Symptoms', 'spiralengine'),
+                'items' => [
+                    'type' => 'string',
+                    'enum' => [
+                        'racing-heart', 'shortness-breath', 'sweating', 'trembling',
+                        'chest-pain', 'nausea', 'dizziness', 'hot-cold',
+                        'numbness', 'unreality'
+                    ]
+                ]
+            ],
+            'trigger_type' => [
+                'type' => 'string',
+                'label' => __('Trigger Type', 'spiralengine'),
+                'enum' => [
+                    'specific-event', 'general-worry', 'social-situation',
+                    'work-related', 'health-concern', 'financial',
+                    'relationship', 'no-clear-trigger', 'multiple'
+                ]
+            ],
+            'trigger_details' => [
+                'type' => 'string',
+                'label' => __('Trigger Details', 'spiralengine')
+            ],
+            'location' => [
+                'type' => 'string',
+                'label' => __('Location', 'spiralengine'),
+                'enum' => ['home', 'work', 'public', 'social', 'transit', 'outdoors', 'other']
+            ],
+            'thought_patterns' => [
+                'type' => 'array',
+                'label' => __('Thought Patterns', 'spiralengine'),
+                'items' => [
+                    'type' => 'string',
+                    'enum' => [
+                        'catastrophizing', 'what-if', 'mind-reading', 'fortune-telling',
+                        'self-criticism', 'perfectionism', 'control', 'rumination'
+                    ]
+                ]
+            ],
+            'coping_strategies' => [
+                'type' => 'array',
+                'label' => __('Coping Strategies', 'spiralengine'),
+                'items' => [
+                    'type' => 'string',
+                    'enum' => [
+                        'breathing', 'grounding', 'movement', 'distraction',
+                        'talking', 'meditation', 'medication', 'cold-water',
+                        'music', 'nature', 'journaling', 'rest'
+                    ]
+                ]
+            ],
+            'duration' => [
+                'type' => 'string',
+                'label' => __('Duration', 'spiralengine'),
+                'enum' => [
+                    'few-minutes', '5-10-minutes', '10-20-minutes',
+                    '20-30-minutes', '30-60-minutes', 'over-hour',
+                    'multiple-hours'
+                ]
+            ],
+            'post_anxiety_level' => [
+                'type' => 'integer',
+                'label' => __('Post-Episode Anxiety Level', 'spiralengine'),
+                'min' => 1,
+                'max' => 10
+            ],
+            'notes' => [
+                'type' => 'string',
+                'label' => __('Notes', 'spiralengine')
+            ],
+            'need_professional_support' => [
+                'type' => 'boolean',
+                'label' => __('Need Professional Support', 'spiralengine')
+            ],
+            'request_ai_support' => [
+                'type' => 'boolean',
+                'label' => __('AI Support Requested', 'spiralengine')
+            ]
+        ];
+    }
+}
